@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:2200/predict';
+const API_URL = '/predict';
 
 const form = document.getElementById('predictForm');
 const submitBtn = document.getElementById('submitBtn');
