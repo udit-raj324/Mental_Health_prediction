@@ -4,20 +4,33 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Literal
-from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+# 1. Initialize the app ONLY ONCE
 app = FastAPI()
 
-# Mount static files (CSS, JS, images)
+# 2. Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# 3. Define the root route ONLY ONCE to serve the HTML file
 @app.get("/")
 def read_index():
     return FileResponse("static/index.html")
 
+# 4. Load the model
+model = joblib.load('Mental_Health_Prediction_Model.pkl')
 
+# 5. Add CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+# 6. Pydantic Models
 class StudentData(BaseModel):
     Age: int = Field(..., ge=10, le=100)
     Gender: Literal['Male', 'Female']
@@ -32,57 +45,21 @@ class StudentData(BaseModel):
     Sleep_Hours_Per_Night: float = Field(..., ge=0, le=24)
     Stress_Level: Literal['Medium', 'Low', 'Very_high', 'High']
 
-
-model = joblib.load('Mental_Health_Prediction_Model.pkl')
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=['*'],
-    allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
-
-
 class PredictionResponse(BaseModel):
     predicted_mental_health_score: float
 
-
-@app.get("/")
-def greet():
-    return {"message": "Hello, welcome to the Mental Health Prediction API!"}
-
-
+# 7. Country Mapping
 country_mapping = {
-    'USA': 'USA',
-    'United States': 'USA',
-    'United States of America': 'USA',
-    'US': 'USA',
-    'UK': 'UK',
-    'United Kingdom': 'UK',
-    'Great Britain': 'UK',
-    'England': 'UK',
-    'Canada': 'Canada',
-    'Australia': 'Australia',
-    'India': 'India',
-    'Germany': 'Germany',
-    'Mexico': 'Mexico',
-    'Turkey': 'Turkey',
-    'France': 'France',
-    'Spain': 'Spain',
-    'Ireland': 'Ireland',
-    'Japan': 'Japan',
-    'Denmark': 'Denmark',
-    'Switzerland': 'Switzerland',
-    'Nepal': 'Nepal',
-    'Italy': 'Italy',
-    'Russia': 'Russia',
-    'Sri Lanka': 'Sri Lanka',
+    'USA': 'USA', 'United States': 'USA', 'United States of America': 'USA', 'US': 'USA',
+    'UK': 'UK', 'United Kingdom': 'UK', 'Great Britain': 'UK', 'England': 'UK',
+    'Canada': 'Canada', 'Australia': 'Australia', 'India': 'India', 'Germany': 'Germany',
+    'Mexico': 'Mexico', 'Turkey': 'Turkey', 'France': 'France', 'Spain': 'Spain',
+    'Ireland': 'Ireland', 'Japan': 'Japan', 'Denmark': 'Denmark', 'Switzerland': 'Switzerland',
+    'Nepal': 'Nepal', 'Italy': 'Italy', 'Russia': 'Russia', 'Sri Lanka': 'Sri Lanka',
     'Maldives': 'Maldives',
 }
 
-
+# 8. Prediction Endpoint
 @app.post("/predict", response_model=PredictionResponse)
 def predict(data: StudentData):
     country_group = country_mapping.get(data.Country, 'Other')
@@ -104,4 +81,3 @@ def predict(data: StudentData):
 
     prediction = model.predict(input_row)[0]
     return PredictionResponse(predicted_mental_health_score=round(float(prediction)))
-
